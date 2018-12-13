@@ -21,6 +21,8 @@ import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -67,6 +69,7 @@ public final class JreExplorer {
     }
 
     explorePaths(jdkPaths, packages, resources, services);
+    exploreJdkModules(packages);
   }
 
   private static void addJdkPath(List<String> jdkPaths, String key) {
@@ -89,6 +92,37 @@ public final class JreExplorer {
 
     for (String jdkPath : jdkPaths) {
       explorePath(packages, resources, services, jdkPath);
+    }
+  }
+
+  /**
+   * Search for packages using the JRE's module architecture. (Java 9 and above).
+   * <p/>
+   * We need to use reflection because we may be running with JDK 8 or older.
+   *
+   * @param packages where to add new found packages
+   */
+  private static void exploreJdkModules(Set<String> packages) {
+    try {
+      Class moduleLayerClass = Class.forName("java.lang.ModuleLayer");
+      Method getBootLayerMethod = moduleLayerClass.getDeclaredMethod("boot");
+      Method getLayerModulesMethod = moduleLayerClass.getDeclaredMethod("modules");
+
+      Class moduleClass = Class.forName("java.lang.Module");
+      Method getModulePackagesMethod = moduleClass.getDeclaredMethod("getPackages");
+
+      Object bootLayer = getBootLayerMethod.invoke(null);
+      Set modules = (Set) getLayerModulesMethod.invoke(bootLayer);
+
+      modules.stream().forEach(module -> {
+        try {
+          packages.addAll((Set) getModulePackagesMethod.invoke(module));
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      });
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+      //Do nothing, we should be running with Java 8 or older.
     }
   }
 
