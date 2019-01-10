@@ -20,14 +20,12 @@ import static reactor.core.publisher.Mono.from;
 import org.mule.api.annotation.NoExtend;
 import org.mule.runtime.api.component.AbstractComponent;
 import org.mule.runtime.api.exception.MuleException;
-import org.mule.runtime.api.lifecycle.Disposable;
-import org.mule.runtime.api.lifecycle.Initialisable;
 import org.mule.runtime.api.lifecycle.InitialisationException;
-import org.mule.runtime.api.lifecycle.Startable;
-import org.mule.runtime.api.lifecycle.Stoppable;
+import org.mule.runtime.api.lifecycle.Lifecycle;
 import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.context.notification.FlowStackElement;
 import org.mule.runtime.core.api.event.CoreEvent;
+import org.mule.runtime.core.api.processor.ContextClassloaderAwareProcessor;
 import org.mule.runtime.core.api.processor.Processor;
 import org.mule.runtime.core.api.processor.ReactiveProcessor;
 import org.mule.runtime.core.api.processor.strategy.ProcessingStrategy;
@@ -37,13 +35,13 @@ import org.mule.runtime.core.internal.policy.PolicyNotificationHelper;
 import org.mule.runtime.core.privileged.event.BaseEventContext;
 import org.mule.runtime.core.privileged.processor.chain.MessageProcessorChain;
 
+import org.reactivestreams.Publisher;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
 import javax.inject.Inject;
-
-import org.reactivestreams.Publisher;
 
 /**
  * Policy chain for handling the message processor associated to a policy.
@@ -51,8 +49,7 @@ import org.reactivestreams.Publisher;
  * @since 4.0
  */
 @NoExtend
-public class PolicyChain extends AbstractComponent
-    implements Initialisable, Startable, Stoppable, Disposable, Processor {
+public class PolicyChain extends AbstractComponent implements Lifecycle, ContextClassloaderAwareProcessor {
 
   @Inject
   private MuleContext muleContext;
